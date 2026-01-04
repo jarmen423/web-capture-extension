@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Capture Pro</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      width: 380px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      padding: 20px;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    
+    h1 {
+      font-size: 20px;
+      margin-bottom: 15px;
+      color: #667eea;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    h1::before {
+      content: "📸";
+      font-size: 24px;
+    }
+    
+    .section {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 5px;
+      font-size: 13px;
+      color: #555;
+    }
+    
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    
+    input:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .mode-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .mode-btn {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+      text-align: center;
+      font-size: 13px;
+    }
+    
+    .mode-btn:hover {
+      border-color: #667eea;
+      transform: translateY(-1px);
+    }
+    
+    .mode-btn.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+    
+    .input-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-top: 10px;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .btn-secondary {
+      width: 100%;
+      padding: 10px;
+      background: #f0f0f0;
+      color: #333;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 5px;
+    }
+    
+    .btn-secondary:hover:not(:disabled) {
+      background: #e0e0e0;
+    }
+    
+    .status {
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-top: 10px;
+      border-left: 4px solid #667eea;
+    }
+    
+    .status.active {
+      background: #e7f3ff;
+      border-left-color: #2196F3;
+    }
+    
+    .status.success {
+      background: #e8f5e9;
+      border-left-color: #4CAF50;
+    }
+    
+    .status.error {
+      background: #ffebee;
+      border-left-color: #f44336;
+    }
+    
+    .progress {
+      width: 100%;
+      height: 6px;
+      background: #e0e0e0;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 8px;
+      display: none;
+    }
+    
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      width: 0%;
+      transition: width 0.3s;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .info-text {
+      font-size: 11px;
+      color: #666;
+      margin-top: 5px;
+      font-style: italic;
+    }
+    
+    .divider {
+      height: 1px;
+      background: #e0e0e0;
+      margin: 15px 0;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    
+    .action-buttons button {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    
+    .btn-stop {
+      background: #f44336;
+      color: white;
+    }
+    
+    .btn-pause {
+      background: #ff9800;
+      color: white;
+    }
+    
+    .btn-resume {
+      background: #4CAF50;
+      color: white;
+    }
+    
+    .btn-export {
+      background: #2196F3;
+      color: white;
+    }
+    
+    .btn-export:hover,
+    .btn-stop:hover,
+    .btn-pause:hover,
+    .btn-resume:hover {
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Web Capture Pro</h1>
+    
+    <div class="section">
+      <label>Capture Mode</label>
+      <div class="mode-selector">
+        <button class="mode-btn active" data-mode="screenshot" id="screenshotMode">
+          📷 Screenshots
+        </button>
+        <button class="mode-btn" data-mode="text" id="textMode">
+          📝 Text Extract
+        </button>
+      </div>
+    </div>
+    
+    <div class="section">
+      <label for="startUrl">Start URL</label>
+      <input type="text" id="startUrl" placeholder="https://example.com/docs" value="">
+      <div class="info-text">Enter the first page URL to start capturing</div>
+    </div>
+    
+    <div class="section">
+      <div class="input-group">
+        <div>
+          <label for="maxPages">Max Pages</label>
+          <input type="number" id="maxPages" value="10" min="1" max="100">
+        </div>
+        <div>
+          <label for="delay">Delay (ms)</label>
+          <input type="number" id="delay" value="2000" min="500" step="500">
+        </div>
+      </div>
+      <div class="info-text">Delay allows pages to fully load before capture</div>
+    </div>
+    
+    <div class="section">
+      <button class="btn-primary" id="startBtn">Start Capture</button>
+      
+      <div class="action-buttons hidden" id="actionButtons">
+        <button class="btn-stop" id="stopBtn">Stop</button>
+        <button class="btn-pause" id="pauseBtn">Pause</button>
+        <button class="btn-export" id="exportBtn">Export</button>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="status" id="status">Ready to capture</div>
+      <div class="progress" id="progress">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <div class="section">
+      <button class="btn-secondary" id="helpBtn">ℹ️ Help & Instructions</button>
+      <button class="btn-secondary" id="settingsBtn">⚙️ Advanced Settings</button>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
