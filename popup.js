@@ -125,6 +125,12 @@ class WebCapturePopup {
       this.updateStatus('Capture paused', 'active');
       document.getElementById('pauseBtn').textContent = 'Resume';
       document.getElementById('pauseBtn').onclick = () => this.resumeCapture();
+
+      // Notify background to pause
+      chrome.runtime.sendMessage({
+        action: 'pauseCapture',
+        sessionId: this.currentSessionId
+      });
     }
   }
   
@@ -192,7 +198,7 @@ class WebCapturePopup {
     
     this.updateStatus(`Exporting ${sessionData.extractedText.length} pages...`, 'active');
     
-    // Create Markdown file
+    // Create Markdown file using Utility class
     let markdown = '# Web Capture Pro - Extracted Documentation\n\n';
     markdown += `**Captured:** ${new Date().toISOString()}\n`;
     markdown += `**Session ID:** ${this.currentSessionId}\n`;
@@ -200,10 +206,15 @@ class WebCapturePopup {
     markdown += '---\n\n';
     
     sessionData.extractedText.forEach((page, index) => {
-      markdown += `## Page ${index + 1}: ${page.title}\n`;
-      markdown += `**URL:** ${page.url}\n`;
-      markdown += `**Timestamp:** ${new Date(page.timestamp).toISOString()}\n\n`;
-      markdown += page.content + '\n\n';
+      // Use WebCaptureUtils.TextProcessor if available, otherwise fallback
+      if (typeof WebCaptureUtils !== 'undefined' && WebCaptureUtils.TextProcessor) {
+        markdown += WebCaptureUtils.TextProcessor.toMarkdown(page.title, page.content, page.url, page.timestamp);
+      } else {
+        markdown += `## Page ${index + 1}: ${page.title}\n`;
+        markdown += `**URL:** ${page.url}\n`;
+        markdown += `**Timestamp:** ${new Date(page.timestamp).toISOString()}\n\n`;
+        markdown += page.content + '\n\n';
+      }
       markdown += '---\n\n';
     });
     

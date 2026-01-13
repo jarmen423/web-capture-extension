@@ -1,17 +1,20 @@
 // Utility functions for Web Capture Pro
 
+// Define global namespace
+self.WebCaptureUtils = {};
+
 // PDF Generation utilities (simplified approach)
-class PDFGenerator {
+self.WebCaptureUtils.PDFGenerator = class PDFGenerator {
   static async generateFromScreenshots(screenshots, filename) {
     // This would require jsPDF library
     // For now, we provide HTML export which can be printed to PDF
     console.log('PDF generation would use jsPDF library');
     return null;
   }
-}
+};
 
 // Text processing utilities
-class TextProcessor {
+self.WebCaptureUtils.TextProcessor = class TextProcessor {
   static cleanText(text) {
     return text
       .replace(/\s+/g, ' ')           // Normalize whitespace
@@ -27,10 +30,10 @@ class TextProcessor {
   static toMarkdown(title, content, url, timestamp) {
     return `# ${title}\n\n**URL:** ${url}\n**Captured:** ${new Date(timestamp).toISOString()}\n\n${content}\n`;
   }
-}
+};
 
 // Navigation detection utilities
-class NavigationDetector {
+self.WebCaptureUtils.NavigationDetector = class NavigationDetector {
   static findNextLink(document) {
     const patterns = [
       { selector: 'a:contains("Next")', weight: 10 },
@@ -73,10 +76,10 @@ class NavigationDetector {
            text.includes('chapter') ||
            text.includes('section');
   }
-}
+};
 
 // Storage management
-class StorageManager {
+self.WebCaptureUtils.StorageManager = class StorageManager {
   static async saveCaptureData(sessionId, data) {
     return new Promise((resolve) => {
       chrome.storage.local.get(['captureData'], (result) => {
@@ -117,10 +120,10 @@ class StorageManager {
       });
     });
   }
-}
+};
 
 // Error handling
-class ErrorHandler {
+self.WebCaptureUtils.ErrorHandler = class ErrorHandler {
   static log(error, context = '') {
     console.error(`[WebCapturePro] ${context}:`, error);
     return {
@@ -139,7 +142,4 @@ class ErrorHandler {
       message: message
     });
   }
-}
-
-// Export utilities
-export { PDFGenerator, TextProcessor, NavigationDetector, StorageManager, ErrorHandler };
+};

@@ -230,6 +230,11 @@ If auto-detection fails:
 3. Extension captures each page you visit
 4. Click "Export" when done
 
+### Pause & Resume
+- Click "Pause" at any time to temporarily stop the capture process.
+- Click "Resume" to continue from where you left off.
+- Useful if you need to manually solve a CAPTCHA or log in.
+
 ### Capturing Specific Sections
 1. Navigate to target page
 2. Use browser dev tools to find section selectors
