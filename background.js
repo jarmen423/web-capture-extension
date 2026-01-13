@@ -1,3 +1,5 @@
+importScripts('utils.js');
+
 // Background service worker for Web Capture Pro
 
 // Store for active capture sessions
@@ -27,6 +29,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case 'completeSession':
       handleCompleteSession(message, sender, sendResponse);
       return true;
+
+    case 'pauseCapture':
+      handlePauseCapture(message, sender, sendResponse);
+      return true;
+
+    case 'resumeCapture':
+      handleResumeCapture(message, sender, sendResponse);
+      return true;
   }
 });
 
@@ -46,7 +56,10 @@ async function handleStartCapture(message, sender, sendResponse) {
     visitedUrls: new Set(),
     screenshots: [],
     extractedText: [],
-    startTime: Date.now()
+    startTime: Date.now(),
+    paused: false,
+    pendingNavigation: false,
+    delay: delay || 1000
   });
   
   // Notify user
@@ -57,9 +70,10 @@ async function handleStartCapture(message, sender, sendResponse) {
     message: `Capturing ${mode} from ${startUrl}`
   });
   
-  // Open first tab
-  chrome.tabs.create({ url: startUrl, active: false }, (tab) => {
+  // Open first tab - start active to ensure context is correct
+  chrome.tabs.create({ url: startUrl, active: true }, (tab) => {
     // Wait for tab to load, then start capture
+    // Use the user-configured delay
     setTimeout(() => {
       chrome.tabs.sendMessage(tab.id, {
         action: 'capturePage',
@@ -67,7 +81,7 @@ async function handleStartCapture(message, sender, sendResponse) {
         mode: mode,
         tabId: tab.id
       });
-    }, 3000);
+    }, delay || 1000);
   });
   
   sendResponse({ success: true, sessionId });
@@ -83,8 +97,16 @@ async function handleCaptureScreenshot(message, sender, sendResponse) {
   }
   
   try {
-    // Capture visible tab
-    const dataUrl = await chrome.tabs.captureVisibleTab(tabId, { format: 'png', quality: 100 });
+    // Ensure tab and window are active/focused before capturing
+    const tab = await chrome.tabs.get(tabId);
+    await chrome.windows.update(tab.windowId, { focused: true });
+    await chrome.tabs.update(tabId, { active: true });
+
+    // Give a short stabilization delay for rendering
+    await new Promise(r => setTimeout(r, 500));
+
+    // Capture visible tab in the specific window
+    const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png', quality: 100 });
     
     session.screenshots.push({
       url: sender.url,
@@ -152,6 +174,13 @@ function navigateToNextPage(sessionId) {
   const session = captureSessions.get(sessionId);
   if (!session) return;
   
+  // Check if paused
+  if (session.paused) {
+    session.pendingNavigation = true;
+    console.log(`Session ${sessionId} paused, navigation pending`);
+    return;
+  }
+
   // Find next tab or create new one
   chrome.tabs.query({}, (tabs) => {
     const relevantTabs = tabs.filter(t => t.url && t.url.startsWith('http'));
@@ -167,6 +196,7 @@ function navigateToNextPage(sessionId) {
         if (response && response.nextUrl) {
           // Navigate to next URL
           chrome.tabs.update(currentTab.id, { url: response.nextUrl }, () => {
+            // Wait for delay then capture
             setTimeout(() => {
               chrome.tabs.sendMessage(currentTab.id, {
                 action: 'capturePage',
@@ -174,7 +204,7 @@ function navigateToNextPage(sessionId) {
                 mode: session.mode,
                 tabId: currentTab.id
               });
-            }, 3000);
+            }, session.delay); // Using configured delay here as well for consistency
           });
         } else {
           // No more links, complete
@@ -187,6 +217,35 @@ function navigateToNextPage(sessionId) {
       });
     }
   });
+}
+
+function handlePauseCapture(message, sender, sendResponse) {
+  const { sessionId } = message;
+  const session = captureSessions.get(sessionId);
+  if (session) {
+    session.paused = true;
+    console.log(`Session ${sessionId} paused`);
+    sendResponse({ success: true });
+  } else {
+    sendResponse({ error: 'Session not found' });
+  }
+}
+
+function handleResumeCapture(message, sender, sendResponse) {
+  const { sessionId } = message;
+  const session = captureSessions.get(sessionId);
+  if (session) {
+    session.paused = false;
+    console.log(`Session ${sessionId} resumed`);
+
+    if (session.pendingNavigation) {
+      session.pendingNavigation = false;
+      navigateToNextPage(sessionId);
+    }
+    sendResponse({ success: true });
+  } else {
+    sendResponse({ error: 'Session not found' });
+  }
 }
 
 async function compilePDF(sessionId) {
