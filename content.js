@@ -3,55 +3,58 @@
 
 console.log('Web Capture Pro content script loaded');
 
-// Listen for messages from background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Content script received message:', message);
-  
+
   switch (message.action) {
     case 'capturePage':
       handleCapturePage(message, sendResponse);
       return true;
-      
+
     case 'findNextLink':
       handleFindNextLink(message, sendResponse);
       return true;
-      
+
     case 'extractAllText':
       handleExtractAllText(message, sendResponse);
+      return true;
+
+    case 'captureFullPageScreenshots':
+      handleCaptureFullPage(message, sendResponse);
       return true;
   }
 });
 
 async function handleCapturePage(message, sendResponse) {
-  const { sessionId, mode, tabId } = message;
-  
-  console.log(`Capturing page in ${mode} mode`);
-  
+  const { sessionId, mode, tabId, customContentSelector, fullPage } = message;
+
+  console.log(`Capturing page in ${mode} mode${fullPage ? ' (full-page)' : ''}`);
+
+  // Scroll to top and wait for stabilization
+  window.scrollTo(0, 0);
+  await new Promise(r => setTimeout(r, 800));
+
   if (mode === 'screenshot') {
-    // For screenshots, we just need to ensure page is loaded
-    // The actual screenshot is taken by background script using chrome.tabs.captureVisibleTab
-    
-    // Scroll to top first
-    window.scrollTo(0, 0);
-    
-    // Wait a moment for any lazy loading
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Notify background to capture
+    if (fullPage) {
+      await handleCaptureFullPage({ sessionId, tabId }, sendResponse);
+      return;
+    }
     chrome.runtime.sendMessage({
       action: 'captureScreenshot',
       sessionId: sessionId,
       tabId: tabId
     }, (response) => {
-      sendResponse(response);
+      if (chrome.runtime.lastError) {
+        sendResponse({ error: chrome.runtime.lastError.message });
+      } else {
+        sendResponse(response);
+      }
     });
-    
   } else if (mode === 'text') {
-    // Extract text content
-    const textContent = extractTextFromPage();
+    const textContent = extractTextFromPage(customContentSelector);
     const pageTitle = document.title;
     const pageUrl = window.location.href;
-    
+
     chrome.runtime.sendMessage({
       action: 'extractText',
       sessionId: sessionId,
@@ -59,218 +62,98 @@ async function handleCapturePage(message, sendResponse) {
       pageTitle: pageTitle,
       pageUrl: pageUrl
     }, (response) => {
-      sendResponse(response);
+      if (chrome.runtime.lastError) {
+        sendResponse({ error: chrome.runtime.lastError.message });
+      } else {
+        sendResponse(response);
+      }
     });
   }
 }
 
-function extractTextFromPage() {
-  let content = '';
-  
-  // Try to find common documentation structures
-  const selectors = [
-    'article',           // HTML5 article
-    '.documentation',    // Common doc class
-    '.docs-content',     // Docs sites
-    '.content',          // Generic content
-    'main',              // HTML5 main
-    '#main-content',     // Common ID
-    '.main-content',
-    'body'               // Fallback
-  ];
-  
-  let targetElement = null;
-  for (const selector of selectors) {
-    const el = document.querySelector(selector);
-    if (el && el.textContent.trim().length > 100) {
-      targetElement = el;
-      break;
+function extractTextFromPage(customSelector) {
+  let root = null;
+
+  if (customSelector) {
+    try {
+      root = document.querySelector(customSelector);
+    } catch (e) {
+      console.warn('Invalid custom selector:', customSelector);
     }
   }
-  
-  if (!targetElement) {
-    targetElement = document.body;
+
+  if (!root && typeof WebCaptureUtils !== 'undefined' && WebCaptureUtils.TextProcessor) {
+    root = WebCaptureUtils.TextProcessor.findBestContentRoot(document);
   }
-  
-  // Extract structured text
-  content += `# ${document.title}\n\n`;
+
+  if (!root) {
+    root = document.body;
+  }
+
+  // Use the shared htmlToMarkdown if available
+  if (typeof WebCaptureUtils !== 'undefined' && WebCaptureUtils.TextProcessor) {
+    const md = WebCaptureUtils.TextProcessor.htmlToMarkdown(root);
+    return `# ${document.title}\n\nURL: ${window.location.href}\nCaptured: ${new Date().toISOString()}\n\n${md}`;
+  }
+
+  // Fallback native extraction
+  let content = `# ${document.title}\n\n`;
   content += `URL: ${window.location.href}\n`;
   content += `Captured: ${new Date().toISOString()}\n\n`;
-  
-  // Extract headings and paragraphs
-  const headings = targetElement.querySelectorAll('h1, h2, h3, h4, h5, h6');
-  const paragraphs = targetElement.querySelectorAll('p, li');
-  
+
+  const headings = root.querySelectorAll('h1, h2, h3, h4, h5, h6');
+  const paragraphs = root.querySelectorAll('p, li, pre, td');
+
   if (headings.length > 0) {
-    content += '## Content Structure\n\n';
     headings.forEach(h => {
       const level = parseInt(h.tagName.substring(1));
       const prefix = '#'.repeat(level);
       const text = h.textContent.trim().replace(/\s+/g, ' ');
-      if (text) {
-        content += `${prefix} ${text}\n`;
-      }
+      if (text) content += `${prefix} ${text}\n`;
     });
     content += '\n';
   }
-  
-  // Extract main content
-  content += '## Full Content\n\n';
-  
-  // Get all text blocks
-  const textBlocks = [];
-  
-  // Headings with their content
-  const headingsArray = Array.from(headings);
-  headingsArray.forEach((h, index) => {
-    const hText = h.textContent.trim();
-    if (hText) {
-      const level = parseInt(h.tagName.substring(1));
-      const prefix = '#'.repeat(level);
-      textBlocks.push(`${prefix} ${hText}\n`);
-      
-      // Get following content until next heading
-      let next = h.nextElementSibling;
-      let sectionContent = '';
-      while (next && !/^H[1-6]$/.test(next.tagName)) {
-        if (next.tagName === 'P' || next.tagName === 'UL' || next.tagName === 'OL' || next.tagName === 'DIV') {
-          const text = next.textContent.trim().replace(/\s+/g, ' ');
-          if (text) {
-            if (next.tagName === 'UL' || next.tagName === 'OL') {
-              const items = Array.from(next.querySelectorAll('li')).map(li => `- ${li.textContent.trim()}`).join('\n');
-              sectionContent += items + '\n';
-            } else {
-              sectionContent += text + '\n\n';
-            }
-          }
-        }
-        next = next.nextElementSibling;
-      }
-      if (sectionContent) {
-        textBlocks.push(sectionContent);
+
+  paragraphs.forEach(p => {
+    const text = p.textContent.trim().replace(/\s+/g, ' ');
+    if (text && text.length > 10) {
+      if (p.tagName === 'LI') {
+        content += `- ${text}\n`;
+      } else if (p.tagName === 'PRE') {
+        content += `\n\`\`\`\n${text}\n\`\`\`\n\n`;
+      } else if (p.tagName === 'TD') {
+        content += `${text} | `;
+      } else {
+        content += `${text}\n\n`;
       }
     }
   });
-  
-  // If no headings found, extract all paragraphs
-  if (headingsArray.length === 0) {
-    paragraphs.forEach(p => {
-      const text = p.textContent.trim().replace(/\s+/g, ' ');
-      if (text && text.length > 20) {
-        if (p.tagName === 'LI') {
-          textBlocks.push(`- ${text}\n`);
-        } else {
-          textBlocks.push(`${text}\n\n`);
-        }
-      }
-    });
-  }
-  
-  content += textBlocks.join('');
-  
-  // Clean up
+
   content = content.replace(/\n{3,}/g, '\n\n');
-  
   return content;
 }
 
 async function handleFindNextLink(message, sendResponse) {
-  const { sessionId } = message;
-  
-  // Strategy 1: Look for "Next" links
-  const nextSelectors = [
-    'a:contains("Next")',
-    'a:contains("next")',
-    'a:contains("→")',
-    'a[rel="next"]',
-    '.next-page',
-    '.pagination-next',
-    'a.nav-next',
-    '.next-link'
-  ];
-  
+  const { sessionId, customNextSelector } = message;
+
   let nextLink = null;
-  
-  for (const selector of nextSelectors) {
-    try {
-      const links = document.querySelectorAll(selector);
-      if (links.length > 0) {
-        nextLink = links[0];
-        break;
-      }
-    } catch (e) {
-      // Try jQuery-style selector
-      const links = document.querySelectorAll('a');
-      for (const link of links) {
-        if (link.textContent.toLowerCase().includes('next') || 
-            link.textContent.includes('→')) {
-          nextLink = link;
-          break;
-        }
-      }
-      if (nextLink) break;
-    }
+
+  if (typeof WebCaptureUtils !== 'undefined' && WebCaptureUtils.NavigationDetector) {
+    nextLink = WebCaptureUtils.NavigationDetector.findNextLink(document, customNextSelector);
+  } else {
+    // Inline fallback
+    const relNext = document.querySelector('a[rel="next"]');
+    if (relNext && relNext.href) nextLink = relNext;
   }
-  
-  // Strategy 2: Look for pagination links
-  if (!nextLink) {
-    const pagination = document.querySelector('.pagination, nav, [role="navigation"]');
-    if (pagination) {
-      const links = pagination.querySelectorAll('a');
-      for (const link of links) {
-        const text = link.textContent.toLowerCase();
-        if (text.includes('next') || text.includes('→') || 
-            (links.length > 1 && Array.from(links).indexOf(link) === links.length - 1)) {
-          nextLink = link;
-          break;
-        }
-      }
-    }
-  }
-  
-  // Strategy 3: Look for sidebar navigation
-  if (!nextLink) {
-    const sidebar = document.querySelector('.sidebar, .toc, #sidebar, .nav-sidebar');
-    if (sidebar) {
-      const links = sidebar.querySelectorAll('a');
-      const currentUrl = window.location.href;
-      const currentLink = Array.from(links).find(l => l.href === currentUrl);
-      if (currentLink) {
-        const currentIndex = Array.from(links).indexOf(currentLink);
-        if (currentIndex < links.length - 1) {
-          nextLink = links[currentIndex + 1];
-        }
-      }
-    }
-  }
-  
-  // Strategy 4: Look for any link that seems like it goes forward
-  if (!nextLink) {
-    const allLinks = document.querySelectorAll('a[href]');
-    const currentPath = window.location.pathname;
-    
-    // Try to find links with similar paths but "next" sequence
-    for (const link of allLinks) {
-      const href = link.href;
-      if (href.startsWith('http') && href !== currentPath) {
-        // Check if it's a documentation page link
-        if (href.includes('/docs/') || href.includes('/doc/') || 
-            href.includes('/chapter') || href.includes('/section') ||
-            href.match(/\d+/)) {
-          nextLink = link;
-          break;
-        }
-      }
-    }
-  }
-  
+
   if (nextLink && nextLink.href) {
-    // Check if we've already visited this URL
     chrome.runtime.sendMessage({
       action: 'checkVisited',
       url: nextLink.href
     }, (response) => {
-      if (response && !response.visited) {
+      if (chrome.runtime.lastError) {
+        sendResponse({ nextUrl: nextLink.href });
+      } else if (response && !response.visited) {
         sendResponse({ nextUrl: nextLink.href });
       } else {
         sendResponse({ nextUrl: null });
@@ -282,8 +165,70 @@ async function handleFindNextLink(message, sendResponse) {
 }
 
 function handleExtractAllText(message, sendResponse) {
-  const text = extractTextFromPage();
+  const text = extractTextFromPage(message.customContentSelector);
   sendResponse({ text: text });
+}
+
+// ─── Full-Page Screenshot Support ───────────────────────────────────────────
+async function handleCaptureFullPage(message, sendResponse) {
+  const { sessionId, tabId } = message;
+  const screenshots = [];
+
+  const docHeight = Math.max(
+    document.body?.scrollHeight || 0,
+    document.documentElement?.scrollHeight || 0
+  );
+  const viewportHeight = window.innerHeight;
+  let currentY = 0;
+
+  while (currentY < docHeight) {
+    window.scrollTo(0, currentY);
+    await new Promise(r => setTimeout(r, 600));
+
+    // Request background to capture this viewport
+    const dataUrl = await requestViewportCapture(tabId);
+    if (dataUrl) {
+      screenshots.push({ dataUrl, scrollY: currentY });
+    }
+
+    currentY += viewportHeight;
+    if (currentY + viewportHeight > docHeight) {
+      currentY = docHeight - viewportHeight;
+      if (currentY <= (screenshots[screenshots.length - 1]?.scrollY || -1)) break;
+    }
+  }
+
+  // Scroll back to top
+  window.scrollTo(0, 0);
+
+  // Send all captured viewports to background
+  chrome.runtime.sendMessage({
+    action: 'captureFullPageComplete',
+    sessionId,
+    screenshots,
+    pageUrl: window.location.href
+  }, (response) => {
+    if (chrome.runtime.lastError) {
+      sendResponse({ error: chrome.runtime.lastError.message });
+    } else {
+      sendResponse(response);
+    }
+  });
+}
+
+function requestViewportCapture(tabId) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({
+      action: 'captureViewport',
+      tabId: tabId
+    }, (response) => {
+      if (chrome.runtime.lastError || !response?.success) {
+        resolve(null);
+      } else {
+        resolve(response.dataUrl || null);
+      }
+    });
+  });
 }
 
 // Helper: Wait for page to be fully loaded
@@ -297,7 +242,15 @@ function waitForLoad() {
   });
 }
 
-// Initialize
 waitForLoad().then(() => {
   console.log('Page fully loaded, ready for capture');
+});
+
+// Global error handling
+window.addEventListener('error', (e) => {
+  console.error('[WebCapturePro Content] Error:', e.message);
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('[WebCapturePro Content] Unhandled rejection:', e.reason);
 });

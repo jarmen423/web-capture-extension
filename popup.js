@@ -4,241 +4,334 @@ class WebCapturePopup {
   constructor() {
     this.mode = 'screenshot';
     this.isCapturing = false;
+    this.isPaused = false;
     this.currentSessionId = null;
+    this.currentPage = 0;
+    this.totalPages = 0;
     this.init();
   }
-  
+
   init() {
     // Mode selection
-    document.getElementById('screenshotMode').addEventListener('click', () => {
-      this.setMode('screenshot');
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.setMode(btn.dataset.mode));
     });
-    
-    document.getElementById('textMode').addEventListener('click', () => {
-      this.setMode('text');
-    });
-    
+
     // Buttons
     document.getElementById('startBtn').addEventListener('click', () => this.startCapture());
     document.getElementById('stopBtn').addEventListener('click', () => this.stopCapture());
-    document.getElementById('pauseBtn').addEventListener('click', () => this.pauseCapture());
-    document.getElementById('exportBtn').addEventListener('click', () => this.exportData());
+    document.getElementById('pauseBtn').addEventListener('click', () => this.togglePause());
+    document.getElementById('exportBtn').addEventListener('click', () => this.exportData('html'));
+    document.getElementById('exportPdfBtn').addEventListener('click', () => this.exportData('pdf'));
     document.getElementById('helpBtn').addEventListener('click', () => this.showHelp());
-    document.getElementById('settingsBtn').addEventListener('click', () => this.showSettings());
-    
-    // Listen for messages from background
+    document.getElementById('optionsBtn').addEventListener('click', () => chrome.runtime.openOptionsPage());
+
+    // Advanced toggle
+    const advToggle = document.getElementById('advancedToggle');
+    advToggle.addEventListener('click', () => {
+      const section = document.getElementById('advancedSection');
+      const arrow = document.getElementById('advancedArrow');
+      section.classList.toggle('open');
+      arrow.textContent = section.classList.contains('open') ? '▲' : '▼';
+    });
+
+    // Full page checkbox visibility
+    document.getElementById('fullPage').addEventListener('change', (e) => {
+      chrome.storage.local.set({ fullPageDefault: e.target.checked });
+    });
+
+    // Background messages
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       this.handleBackgroundMessage(message, sendResponse);
+      return true;
     });
-    
-    // Load saved settings
+
+    // Restore state
     this.loadSettings();
+    this.restoreSessionState();
   }
-  
+
   setMode(mode) {
     this.mode = mode;
-    
-    // Update UI
     document.querySelectorAll('.mode-btn').forEach(btn => {
-      btn.classList.remove('active');
+      btn.classList.toggle('active', btn.dataset.mode === mode);
     });
-    
-    if (mode === 'screenshot') {
-      document.getElementById('screenshotMode').classList.add('active');
+
+    const urlSection = document.getElementById('urlSection');
+    const batchSection = document.getElementById('batchSection');
+    const screenshotOptions = document.getElementById('screenshotOptions');
+
+    if (mode === 'batch') {
+      urlSection.classList.add('hidden');
+      batchSection.classList.remove('hidden');
     } else {
-      document.getElementById('textMode').classList.add('active');
+      urlSection.classList.remove('hidden');
+      batchSection.classList.add('hidden');
     }
-    
-    // Save preference
+
+    screenshotOptions.classList.toggle('hidden', mode !== 'screenshot');
     chrome.storage.local.set({ captureMode: mode });
   }
-  
+
+  async restoreSessionState() {
+    try {
+      const response = await this.sendMessage({ action: 'getActiveSession' });
+      if (response?.session && !response.session.completed) {
+        const s = response.session;
+        this.currentSessionId = s.sessionId;
+        this.mode = s.mode;
+        this.isCapturing = true;
+        this.isPaused = s.paused;
+        this.currentPage = s.currentPage;
+        this.totalPages = s.maxPages;
+
+        this.setMode(this.mode);
+        this.toggleControls(true);
+        this.showProgress(true);
+        this.updateProgress(s.currentPage, s.maxPages);
+        this.updateStatus(`Session ${s.paused ? 'paused' : 'active'} — ${s.currentPage}/${s.maxPages} pages`, s.paused ? 'warning' : 'active');
+        this.updatePauseButton();
+        this.showExportIfComplete(s);
+      }
+    } catch (e) {
+      console.log('No active session to restore');
+    }
+  }
+
   async startCapture() {
     const startUrl = document.getElementById('startUrl').value.trim();
+    const batchRaw = document.getElementById('batchUrls').value.trim();
     const maxPages = parseInt(document.getElementById('maxPages').value);
     const delay = parseInt(document.getElementById('delay').value);
-    
-    // Validation
-    if (!startUrl) {
-      this.updateStatus('Please enter a start URL', 'error');
-      return;
+    const customContentSelector = document.getElementById('customContentSelector').value.trim();
+    const customNextSelector = document.getElementById('customNextSelector').value.trim();
+    const fullPage = document.getElementById('fullPage').checked;
+
+    let batchUrls = [];
+    if (this.mode === 'batch') {
+      batchUrls = batchRaw.split('\n').map(u => u.trim()).filter(u => u.startsWith('http'));
+      if (batchUrls.length === 0) {
+        this.updateStatus('Please enter at least one valid URL', 'error');
+        return;
+      }
+    } else {
+      if (!startUrl) {
+        this.updateStatus('Please enter a start URL', 'error');
+        return;
+      }
+      if (!startUrl.startsWith('http://') && !startUrl.startsWith('https://')) {
+        this.updateStatus('URL must start with http:// or https://', 'error');
+        return;
+      }
     }
-    
-    if (!startUrl.startsWith('http://') && !startUrl.startsWith('https://')) {
-      this.updateStatus('URL must start with http:// or https://', 'error');
-      return;
-    }
-    
+
     if (maxPages < 1 || maxPages > 100) {
       this.updateStatus('Max pages must be between 1 and 100', 'error');
       return;
     }
-    
-    // Update UI
+
     this.isCapturing = true;
+    this.isPaused = false;
+    this.currentPage = 0;
+    this.totalPages = maxPages;
     this.toggleControls(true);
     this.updateStatus('Starting capture session...', 'active');
     this.showProgress(true);
-    
-    // Save settings
+    this.clearErrors();
+
     chrome.storage.local.set({
       lastUrl: startUrl,
       lastMaxPages: maxPages,
-      lastDelay: delay
+      lastDelay: delay,
+      lastBatchUrls: batchRaw,
+      lastCustomContentSelector: customContentSelector,
+      lastCustomNextSelector: customNextSelector
     });
-    
-    // Send start command to background
-    chrome.runtime.sendMessage({
-      action: 'startCapture',
-      mode: this.mode,
-      startUrl: startUrl,
-      maxPages: maxPages,
-      delay: delay
-    }, (response) => {
-      if (response && response.success) {
+
+    try {
+      const response = await this.sendMessage({
+        action: 'startCapture',
+        mode: this.mode,
+        startUrl: startUrl,
+        maxPages: maxPages,
+        delay: delay,
+        customContentSelector,
+        customNextSelector,
+        batchUrls,
+        fullPage
+      });
+
+      if (response?.success) {
         this.currentSessionId = response.sessionId;
-        this.updateStatus(`Session ${response.sessionId} started - ${this.mode} mode`, 'active');
-      } else if (response && response.error) {
-        this.updateStatus(`Error: ${response.error}`, 'error');
-        this.stopCapture();
+        this.updateStatus(`Session started — ${this.mode} mode`, 'active');
+        chrome.action.setBadgeText({ text: 'REC' });
+        chrome.action.setBadgeBackgroundColor({ color: '#f44336' });
+      } else {
+        throw new Error(response?.error || 'Unknown error');
       }
-    });
+    } catch (error) {
+      this.updateStatus(`Error: ${error.message}`, 'error');
+      this.stopCapture();
+    }
   }
-  
+
   stopCapture() {
     this.isCapturing = false;
+    this.isPaused = false;
     this.toggleControls(false);
     this.updateStatus('Capture stopped', 'error');
     this.showProgress(false);
-    
-    if (this.currentSessionId) {
-      chrome.runtime.sendMessage({
-        action: 'completeSession',
-        sessionId: this.currentSessionId,
-        mode: this.mode
-      });
-    }
-  }
-  
-  pauseCapture() {
-    if (this.isCapturing) {
-      this.updateStatus('Capture paused', 'active');
-      document.getElementById('pauseBtn').textContent = 'Resume';
-      document.getElementById('pauseBtn').onclick = () => this.resumeCapture();
+    chrome.action.setBadgeText({ text: '' });
 
-      // Notify background to pause
-      chrome.runtime.sendMessage({
-        action: 'pauseCapture',
+    if (this.currentSessionId) {
+      this.sendMessage({
+        action: 'cancelCapture',
         sessionId: this.currentSessionId
-      });
+      }).catch(() => {});
     }
+    this.currentSessionId = null;
   }
-  
-  resumeCapture() {
-    if (this.isCapturing) {
+
+  async togglePause() {
+    if (!this.isCapturing || !this.currentSessionId) return;
+
+    if (this.isPaused) {
+      this.isPaused = false;
       this.updateStatus('Resuming capture...', 'active');
-      document.getElementById('pauseBtn').textContent = 'Pause';
-      document.getElementById('pauseBtn').onclick = () => this.pauseCapture();
-      
-      // Notify background to continue
-      chrome.runtime.sendMessage({
-        action: 'resumeCapture',
-        sessionId: this.currentSessionId
-      });
+      await this.sendMessage({ action: 'resumeCapture', sessionId: this.currentSessionId });
+      chrome.action.setBadgeText({ text: 'REC' });
+      chrome.action.setBadgeBackgroundColor({ color: '#f44336' });
+    } else {
+      this.isPaused = true;
+      this.updateStatus('Capture paused', 'warning');
+      await this.sendMessage({ action: 'pauseCapture', sessionId: this.currentSessionId });
+      chrome.action.setBadgeText({ text: 'PAU' });
+      chrome.action.setBadgeBackgroundColor({ color: '#ff9800' });
     }
+    this.updatePauseButton();
   }
-  
-  async exportData() {
+
+  updatePauseButton() {
+    const btn = document.getElementById('pauseBtn');
+    btn.textContent = this.isPaused ? 'Resume' : 'Pause';
+    btn.className = this.isPaused ? 'btn-resume' : 'btn-pause';
+  }
+
+  async exportData(format) {
+    if (!this.currentSessionId) {
+      this.updateStatus('No active session to export', 'error');
+      return;
+    }
+
     this.updateStatus('Preparing export...', 'active');
-    
-    // Get session data from storage
-    chrome.storage.local.get(['captureData'], (result) => {
-      const data = result.captureData;
-      
-      if (!data || !data[this.currentSessionId]) {
+
+    try {
+      const result = await new Promise((resolve) => {
+        chrome.storage.local.get(['captureData'], resolve);
+      });
+      const data = result.captureData?.[this.currentSessionId];
+
+      if (!data) {
         this.updateStatus('No data to export yet', 'error');
         return;
       }
-      
-      const sessionData = data[this.currentSessionId];
-      
-      if (this.mode === 'screenshot') {
-        this.exportScreenshots(sessionData);
+
+      if (this.mode === 'screenshot' || data.mode === 'screenshot') {
+        if (format === 'pdf') {
+          await this.exportPDF(data);
+        } else {
+          this.exportScreenshots(data);
+        }
       } else {
-        this.exportText(sessionData);
+        this.exportText(data);
       }
-    });
+    } catch (error) {
+      this.updateStatus(`Export failed: ${error.message}`, 'error');
+    }
   }
-  
-  async exportScreenshots(sessionData) {
-    if (!sessionData.screenshots || sessionData.screenshots.length === 0) {
+
+  exportScreenshots(sessionData) {
+    if (!sessionData.screenshots?.length) {
       this.updateStatus('No screenshots captured', 'error');
       return;
     }
-    
-    this.updateStatus(`Generating PDF with ${sessionData.screenshots.length} screenshots...`, 'active');
-    
-    // Use jsPDF library (we'll include it in the extension)
-    // For now, we'll create a simple HTML file with embedded images
-    
-    const htmlContent = this.createScreenshotHTML(sessionData);
+    const html = this.createScreenshotHTML(sessionData);
     const filename = `capture_${this.currentSessionId}_${Date.now()}.html`;
-    
-    // Download as HTML (can be printed to PDF)
-    this.downloadFile(htmlContent, filename, 'text/html');
-    
-    this.updateStatus(`Exported ${sessionData.screenshots.length} screenshots`, 'success');
+    this.downloadFile(html, filename, 'text/html');
+    this.updateStatus(`Exported ${sessionData.screenshots.length} screenshots as HTML`, 'success');
   }
-  
-  async exportText(sessionData) {
-    if (!sessionData.extractedText || sessionData.extractedText.length === 0) {
+
+  async exportPDF(sessionData) {
+    if (!sessionData.screenshots?.length) {
+      this.updateStatus('No screenshots captured', 'error');
+      return;
+    }
+    this.updateStatus('Generating PDF... (this may take a moment)', 'active');
+
+    try {
+      // Use background's offscreen document generator if available
+      const response = await this.sendMessage({
+        action: 'generatePDFOffscreen',
+        sessionId: this.currentSessionId
+      });
+
+      if (response?.pdfDataUrl) {
+        const filename = `capture_${this.currentSessionId}_${Date.now()}.pdf`;
+        this.downloadFile(response.pdfDataUrl, filename, 'application/pdf');
+        this.updateStatus('PDF exported successfully', 'success');
+      } else if (response?.error) {
+        throw new Error(response.error);
+      } else {
+        throw new Error('PDF generation did not return data');
+      }
+    } catch (error) {
+      console.warn('PDF generation failed, falling back to HTML:', error.message);
+      this.updateStatus(`PDF failed: ${error.message}. Falling back to HTML...`, 'warning');
+      this.exportScreenshots(sessionData);
+    }
+  }
+
+  exportText(sessionData) {
+    if (!sessionData.extractedText?.length) {
       this.updateStatus('No text extracted', 'error');
       return;
     }
-    
-    this.updateStatus(`Exporting ${sessionData.extractedText.length} pages...`, 'active');
-    
-    // Create Markdown file using Utility class
-    let markdown = '# Web Capture Pro - Extracted Documentation\n\n';
+
+    let markdown = '# Web Capture Pro — Extracted Documentation\n\n';
     markdown += `**Captured:** ${new Date().toISOString()}\n`;
     markdown += `**Session ID:** ${this.currentSessionId}\n`;
     markdown += `**Total Pages:** ${sessionData.extractedText.length}\n\n`;
     markdown += '---\n\n';
-    
+
     sessionData.extractedText.forEach((page, index) => {
-      // Use WebCaptureUtils.TextProcessor if available, otherwise fallback
       if (typeof WebCaptureUtils !== 'undefined' && WebCaptureUtils.TextProcessor) {
         markdown += WebCaptureUtils.TextProcessor.toMarkdown(page.title, page.content, page.url, page.timestamp);
       } else {
         markdown += `## Page ${index + 1}: ${page.title}\n`;
-        markdown += `**URL:** ${page.url}\n`;
-        markdown += `**Timestamp:** ${new Date(page.timestamp).toISOString()}\n\n`;
+        markdown += `**URL:** ${page.url}\n\n`;
         markdown += page.content + '\n\n';
       }
       markdown += '---\n\n';
     });
-    
-    // Also create a plain text version
+
     const plainText = this.convertToPlainText(markdown);
-    
-    // Download both
     const mdFilename = `documentation_${this.currentSessionId}.md`;
     const txtFilename = `documentation_${this.currentSessionId}.txt`;
-    
+
     this.downloadFile(markdown, mdFilename, 'text/markdown');
     setTimeout(() => {
       this.downloadFile(plainText, txtFilename, 'text/plain');
     }, 500);
-    
+
     this.updateStatus(`Exported ${sessionData.extractedText.length} pages as Markdown & TXT`, 'success');
   }
-  
+
   createScreenshotHTML(sessionData) {
     let html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Web Capture - ${this.currentSessionId}</title>
+  <title>Web Capture — ${this.currentSessionId}</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
     .header { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
@@ -260,7 +353,6 @@ class WebCapturePopup {
     </div>
   </div>
 `;
-    
     sessionData.screenshots.forEach((shot, index) => {
       html += `  <div class="screenshot">
     <h2>Page ${index + 1}</h2>
@@ -268,183 +360,183 @@ class WebCapturePopup {
     <img src="${shot.dataUrl}" alt="Screenshot ${index + 1}">
   </div>\n`;
     });
-    
     html += '</body>\n</html>';
     return html;
   }
-  
+
   convertToPlainText(markdown) {
     return markdown
       .replace(/^#+\s*/gm, '')
-      .replace(/\*\*/g, '')
       .replace(/\*\*/g, '')
       .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
       .replace(/`/g, '')
       .replace(/^---$/gm, '---')
       .replace(/\n{3,}/g, '\n\n');
   }
-  
+
   downloadFile(content, filename, mimeType) {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
-    
-    chrome.downloads.download({
-      url: url,
-      filename: filename,
-      saveAs: true
-    }, (downloadId) => {
+    chrome.downloads.download({ url, filename, saveAs: true }, (downloadId) => {
       if (chrome.runtime.lastError) {
         console.error('Download failed:', chrome.runtime.lastError);
         this.updateStatus('Download failed: ' + chrome.runtime.lastError.message, 'error');
-      } else {
-        console.log('Download started:', downloadId);
       }
     });
   }
-  
+
   handleBackgroundMessage(message, sendResponse) {
-    if (message.action === 'generatePDF') {
-      // Store screenshot data for export
-      this.storeSessionData(message.sessionId, { screenshots: message.screenshots });
-      this.updateStatus(`Captured ${message.screenshots.length} screenshots`, 'success');
-      this.updateProgress(message.screenshots.length, message.screenshots.length);
-      this.stopCapture();
+    switch (message.action) {
+      case 'captureProgress':
+        if (message.sessionId === this.currentSessionId) {
+          this.currentPage = message.current;
+          this.totalPages = message.total;
+          this.updateProgress(message.current, message.total);
+          this.updateStatus(
+            `${message.mode === 'screenshot' ? 'Captured' : 'Extracted'} ${message.current}/${message.total} — ${message.url || ''}`,
+            'active'
+          );
+        }
+        break;
+
+      case 'captureComplete':
+        if (message.sessionId === this.currentSessionId) {
+          this.isCapturing = false;
+          this.isPaused = false;
+          chrome.action.setBadgeText({ text: '' });
+          this.updateStatus(`Complete — ${message.count} pages ${message.mode === 'screenshot' ? 'captured' : 'extracted'}`, 'success');
+          this.updateProgress(message.count, message.count);
+          this.showExportButton(true);
+        }
+        break;
+
+      case 'sessionError':
+        if (message.sessionId === this.currentSessionId) {
+          this.addError(message.error);
+          this.updateStatus(message.error, 'warning');
+        }
+        break;
     }
-    
-    if (message.action === 'generateTextFiles') {
-      // Store text data for export
-      this.storeSessionData(message.sessionId, { extractedText: message.extractedText });
-      this.updateStatus(`Extracted ${message.extractedText.length} pages`, 'success');
-      this.updateProgress(message.extractedText.length, message.extractedText.length);
-      this.stopCapture();
+    sendResponse?.({ success: true });
+  }
+
+  showExportButton(show) {
+    document.getElementById('exportBtn').classList.toggle('hidden', !show);
+    const isScreenshot = this.mode === 'screenshot';
+    document.getElementById('exportPdfBtn').classList.toggle('hidden', !(show && isScreenshot));
+  }
+
+  showExportIfComplete(sessionData) {
+    if (sessionData.completed) {
+      this.showExportButton(true);
     }
-    
-    sendResponse({ success: true });
   }
-  
-  storeSessionData(sessionId, data) {
-    chrome.storage.local.get(['captureData'], (result) => {
-      const captureData = result.captureData || {};
-      captureData[sessionId] = { ...captureData[sessionId], ...data };
-      chrome.storage.local.set({ captureData });
-    });
-  }
-  
+
   updateStatus(message, type = 'info') {
-    const statusEl = document.getElementById('status');
-    statusEl.textContent = message;
-    statusEl.className = 'status';
-    if (type) statusEl.classList.add(type);
+    const el = document.getElementById('status');
+    el.textContent = message;
+    el.className = 'status';
+    if (type) el.classList.add(type);
   }
-  
+
   showProgress(show) {
-    const progressEl = document.getElementById('progress');
-    progressEl.style.display = show ? 'block' : 'none';
-    if (!show) {
-      this.updateProgress(0, 1);
-    }
+    document.getElementById('progress').style.display = show ? 'block' : 'none';
+    if (!show) this.updateProgress(0, 1);
   }
-  
+
   updateProgress(current, total) {
     const bar = document.getElementById('progressBar');
-    const percent = total > 0 ? (current / total) * 100 : 0;
+    const percent = total > 0 ? Math.min((current / total) * 100, 100) : 0;
     bar.style.width = percent + '%';
   }
-  
+
   toggleControls(isCapturing) {
     document.getElementById('startBtn').disabled = isCapturing;
     document.getElementById('startUrl').disabled = isCapturing;
+    document.getElementById('batchUrls').disabled = isCapturing;
     document.getElementById('maxPages').disabled = isCapturing;
     document.getElementById('delay').disabled = isCapturing;
-    
+    document.getElementById('fullPage').disabled = isCapturing;
+
     const actionButtons = document.getElementById('actionButtons');
-    if (isCapturing) {
-      actionButtons.classList.remove('hidden');
-    } else {
-      actionButtons.classList.add('hidden');
+    actionButtons.classList.toggle('hidden', !isCapturing);
+
+    if (!isCapturing) {
+      this.showExportButton(false);
     }
   }
-  
+
+  addError(msg) {
+    const list = document.getElementById('errorList');
+    list.classList.remove('hidden');
+    const item = document.createElement('div');
+    item.className = 'error-item';
+    item.textContent = msg;
+    list.appendChild(item);
+  }
+
+  clearErrors() {
+    const list = document.getElementById('errorList');
+    list.innerHTML = '';
+    list.classList.add('hidden');
+  }
+
   loadSettings() {
-    chrome.storage.local.get(['captureMode', 'lastUrl', 'lastMaxPages', 'lastDelay'], (result) => {
-      if (result.captureMode) {
-        this.setMode(result.captureMode);
-      }
-      if (result.lastUrl) {
-        document.getElementById('startUrl').value = result.lastUrl;
-      }
-      if (result.lastMaxPages) {
-        document.getElementById('maxPages').value = result.lastMaxPages;
-      }
-      if (result.lastDelay) {
-        document.getElementById('delay').value = result.lastDelay;
-      }
+    chrome.storage.local.get([
+      'captureMode', 'lastUrl', 'lastMaxPages', 'lastDelay',
+      'lastBatchUrls', 'lastCustomContentSelector', 'lastCustomNextSelector', 'fullPageDefault'
+    ], (result) => {
+      if (result.captureMode) this.setMode(result.captureMode);
+      if (result.lastUrl) document.getElementById('startUrl').value = result.lastUrl;
+      if (result.lastMaxPages) document.getElementById('maxPages').value = result.lastMaxPages;
+      if (result.lastDelay) document.getElementById('delay').value = result.lastDelay;
+      if (result.lastBatchUrls) document.getElementById('batchUrls').value = result.lastBatchUrls;
+      if (result.lastCustomContentSelector) document.getElementById('customContentSelector').value = result.lastCustomContentSelector;
+      if (result.lastCustomNextSelector) document.getElementById('customNextSelector').value = result.lastCustomNextSelector;
+      if (result.fullPageDefault) document.getElementById('fullPage').checked = true;
     });
   }
-  
+
+  sendMessage(message) {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(response);
+        }
+      });
+    });
+  }
+
   showHelp() {
-    const helpText = `Web Capture Pro - Help
+    const helpText = `Web Capture Pro — Help
 
-Mode Selection:
-• 📷 Screenshots: Captures visual screenshots of each page
-• 📝 Text Extract: Extracts text content from each page
+Modes:
+• 📷 Screenshots: Capture PNG screenshots of each page
+• 📝 Text: Extract structured text as Markdown & TXT
+• 📋 Batch: Provide a list of URLs to capture in order
 
-How to Use:
-1. Select capture mode
-2. Enter starting URL (first page)
-3. Set max pages to capture
-4. Set delay between pages (for loading)
-5. Click Start Capture
-
-For Multi-Page Sites:
-• The extension will auto-detect navigation links
-• It looks for "Next" buttons, pagination, or sidebar nav
-• You can manually navigate if auto-detection fails
+Auto-Navigation:
+The extension detects Next links, pagination, and sidebar TOC.
+If auto-detection fails, use Advanced Options to set a custom Next Link CSS Selector.
 
 Export:
-• Screenshots → HTML file (print to PDF)
-• Text → Markdown (.md) and Plain Text (.txt)
+• Screenshots → HTML (print to PDF) or true PDF (Chrome 109+)
+• Text → Markdown (.md) + Plain Text (.txt)
 
 Tips:
-• Increase delay for heavy pages
-• Start with small max pages to test
-• Check browser console for detailed logs
-• Export data before closing popup`;
-    
-    alert(helpText);
-  }
-  
-  showSettings() {
-    const settingsText = `Advanced Settings:
-
-• Max Pages: 1-100 (default: 10)
-• Delay: 500-10000ms (default: 2000ms)
-• Storage: Data kept for 24 hours
-
-Storage Management:
-• Clear stored data: chrome://extensions → Web Capture Pro → Storage
+• Increase delay for heavy/lazy-loaded pages
+• Use Custom Content Selector to target specific page areas
 • Export immediately after capture
-
-Troubleshooting:
-• Permission denied: Check extension permissions
-• No navigation found: Manually click through pages
-• Download failed: Check browser download settings
-
-Support:
-• Check browser console for errors
-• Verify URL format (https://...)
-• Ensure page loads before capture
-• Try smaller delay values`;
-    
-    alert(settingsText);
+• Check browser console for detailed logs`;
+    alert(helpText);
   }
 }
 
 // Initialize popup when DOM is ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    new WebCapturePopup();
-  });
+  document.addEventListener('DOMContentLoaded', () => new WebCapturePopup());
 } else {
   new WebCapturePopup();
 }

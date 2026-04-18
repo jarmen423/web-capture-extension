@@ -21,6 +21,8 @@ A powerful Chrome/Chromium browser extension for capturing entire documentation 
 - Follows sidebar navigation
 - Handles common documentation structures
 - Manual navigation support
+- **Custom CSS selectors** for content and next-link targeting
+- **Batch URL mode** for known page lists
 
 ## Installation
 
@@ -53,14 +55,27 @@ A powerful Chrome/Chromium browser extension for capturing entire documentation 
 
 ```
 web-capture-extension/
-├── manifest.json          # Extension configuration
+├── manifest.json          # Extension configuration (MV3)
 ├── background.js          # Service worker for orchestration
 ├── content.js             # Content script for page interaction
 ├── popup.html             # User interface
 ├── popup.js               # UI logic and controls
 ├── utils.js               # Utility functions
+├── options.html           # Settings page
+├── options.js             # Settings logic
+├── offscreen.html         # Offscreen document for PDF generation
+├── offscreen.js           # PDF generation logic
+├── lib/
+│   └── jspdf.umd.min.js   # Vendored jsPDF library
+├── icons/
+│   ├── icon16.png         # Toolbar icon
+│   ├── icon48.png         # Extension page icon
+│   └── icon128.png        # Store / notifications
+├── __tests__/
+│   └── utils.test.js      # Jest unit tests
+├── package.json           # Package metadata & test scripts
 ├── README.md              # This file
-└── icon.png               # Extension icon (optional)
+└── icon.svg               # Source icon
 ```
 
 ## Usage Guide
@@ -265,13 +280,14 @@ For multiple sites:
 
 ## Future Enhancements
 
-- [ ] PDF generation without print dialog
-- [ ] Custom CSS selectors
-- [ ] Batch URL processing
+- [x] PDF generation without print dialog
+- [x] Custom CSS selectors
+- [x] Batch URL processing
 - [ ] Cloud storage integration
 - [ ] Video recording mode
 - [ ] OCR for images
 - [ ] Translation support
+- [ ] Puppeteer integration tests
 
 ## Contributing
 
@@ -300,6 +316,6 @@ No external dependencies required.
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: 2026-01-03  
+**Version**: 1.1.0  
+**Last Updated**: 2026-04-17  
 **Author**: Web Capture Pro Team

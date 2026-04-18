@@ -1,10 +1,11 @@
 {
   "name": "web-capture-pro",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Capture multi-page websites and documentation sites with screenshots or text extraction",
   "main": "background.js",
   "scripts": {
-    "test": "echo \"No tests defined\" && exit 0"
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "keywords": [
     "chrome-extension",
@@ -21,8 +22,10 @@
     "url": "https://github.com/example/web-capture-pro"
   },
   "engines": {
-    "chrome": ">=88"
+    "chrome": ">=109"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  }
 }

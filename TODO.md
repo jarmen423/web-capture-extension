@@ -1,41 +1,35 @@
 # Remaining Tasks for Web Capture Pro
 
-To make this product fully shippable and robust, the following tasks should be addressed:
+## Completed in v1.1.0
 
-## High Priority
+- [x] **True PDF Generation**: Integrated jsPDF via offscreen document for native PDF export. Falls back to HTML export on unsupported browsers.
+- [x] **Unit Tests**: Jest + jsdom test suite for `utils.js` (TextProcessor, NavigationDetector, StorageManager, ErrorHandler).
+- [x] **Robust Navigation Logic**: Rewrote `content.js` and `utils.js` to use standard DOM APIs only. Removed all jQuery-style `:contains` selectors.
+- [x] **Error Handling & Recovery**: Added retry logic (3 attempts) for screenshot capture. Handles closed tabs, network errors, and missing tabs gracefully.
+- [x] **Pause/Resume UX**: Badge text updates (REC/PAU), session persists in `chrome.storage.session`, popup restores state on reopen.
+- [x] **Full-Page Screenshots**: Scroll-and-stitch capture option for screenshot mode.
+- [x] **Custom CSS Selectors**: Advanced options for content targeting and next-link override.
+- [x] **Batch URL Mode**: Third capture mode for processing a list of URLs sequentially.
+- [x] **Settings / Options Page**: `options.html` with default settings and data management.
+- [x] **Real-Time Progress**: Progress bar and status updates during capture. Popup survives close/reopen.
+- [x] **Icon Assets**: Generated PNG icons (16/48/128px) from SVG for notifications and manifest.
+- [x] **Missing `icon.png` Bug**: Fixed all `icon.png` references to `icons/icon128.png`.
+- [x] **Duplicate `delay` Bug**: Removed duplicate `delay` property in session initialization.
+- [x] **`checkVisited` Handler**: Added missing message handler in background.js.
+- [x] **Tab Lifecycle**: Tracks session tabId, waits for `tabs.onUpdated` load completion, recovers if tab is closed.
+- [x] **Manifest V3 Improvements**: Added `icons`, `options_page`, `web_accessible_resources`, `alarms` permission.
 
-- [ ] **True PDF Generation**:
-  - Currently, we export an HTML file that users must print to PDF.
-  - **Goal**: Integrate `jsPDF` (or `html2pdf.js`) to generate a real PDF file directly within the extension.
-  - **Action**: Add the library to the repo and update `compilePDF` in `background.js` (or move logic to offscreen document if needed for complex rendering).
+## Known Limitations
 
-- [ ] **Unit & Integration Tests**:
-  - Currently, there are no automated tests.
-  - **Goal**: Set up a testing framework (e.g., Jest + Puppeteer/Playwright).
-  - **Action**: Create tests for `utils.js` (text processing) and end-to-end tests for the capture flow.
+- **Full-page screenshots**: Best effort scroll-and-stitch; complex SPAs with dynamic loading may produce duplicates or gaps.
+- **PDF generation**: Requires Chrome 109+ (offscreen document API). Older browsers fall back to HTML export.
+- **Single-page apps**: Navigation detection may miss client-side route changes. Use batch mode or manual navigation.
+- **Memory**: Very large captures (>50 full-page screenshots) may approach service worker memory limits. Export promptly.
 
-- [ ] **Robust Navigation Logic Refactoring**:
-  - Currently, `content.js` has robust navigation logic, while `utils.js` has a simplified placeholder.
-  - **Goal**: Move the robust logic from `content.js` into `WebCaptureUtils.NavigationDetector` in `utils.js`.
-  - **Benefit**: Centralizes logic and makes it testable.
+## Future Ideas
 
-## Medium Priority
-
-- [ ] **Error Handling & Recovery**:
-  - **Goal**: Handle network timeouts or 404s gracefully.
-  - **Action**: Add retry logic in `background.js` if a page load fails.
-
-- [ ] **Pause/Resume UX**:
-  - **Goal**: Improve the visual feedback when paused.
-  - **Action**: Maybe flash the badge or change icon color when paused.
-
-- [ ] **Manual Selection Mode**:
-  - **Goal**: Allow users to click on the "Next" button element to train the navigator if auto-detection fails.
-
-## Low Priority
-
-- [ ] **Cloud Storage Integration**:
-  - Save directly to Google Drive / Dropbox.
-
-- [ ] **OCR Support**:
-  - Extract text from screenshots using Tesseract.js.
+- [ ] Cloud storage integration (Google Drive / Dropbox)
+- [ ] OCR support (Tesseract.js) for screenshots
+- [ ] Puppeteer integration tests for end-to-end capture flow
+- [ ] Custom export templates (HTML/CSS theming)
+- [ ] Export to JSON / EPUB formats
