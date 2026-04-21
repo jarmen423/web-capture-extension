@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Capture Pro — Capture Any Website as PDF or Markdown</title>
+  <meta name="description" content="Automatically capture multi-page websites, documentation, and articles as structured PDFs or clean Markdown. Built for developers, researchers, and AI agents.">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+            accent: { 500: '#667eea', 600: '#5a67d8' }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    .float { animation: float 6s ease-in-out infinite; }
+    @keyframes fadeInUp { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) } }
+    .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; opacity:0; }
+    .delay-100 { animation-delay: 0.1s }
+    .delay-200 { animation-delay: 0.2s }
+    .delay-300 { animation-delay: 0.3s }
+  </style>
+</head>
+<body class="text-slate-800 antialiased">
+
+  <!-- Navigation -->
+  <nav class="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg gradient-bg flex items-center justify-center text-white font-bold text-sm">WC</div>
+          <span class="font-bold text-lg text-slate-900">Web Capture Pro</span>
+        </div>
+        <div class="hidden md:flex items-center gap-8">
+          <a href="#features" class="text-sm font-medium text-slate-600 hover:text-primary-600 transition">Features</a>
+          <a href="#use-cases" class="text-sm font-medium text-slate-600 hover:text-primary-600 transition">Use Cases</a>
+          <a href="#pricing" class="text-sm font-medium text-slate-600 hover:text-primary-600 transition">Pricing</a>
+          <a href="#faq" class="text-sm font-medium text-slate-600 hover:text-primary-600 transition">FAQ</a>
+        </div>
+        <div class="flex items-center gap-4">
+          <a href="#pricing" class="hidden sm:block text-sm font-medium text-slate-600 hover:text-primary-600">Sign In</a>
+          <a href="https://chrome.google.com/webstore" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg gradient-bg text-white text-sm font-semibold hover:shadow-lg hover:shadow-primary-500/30 transition">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 22c-5.523 0-10-4.477-10-10S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+            Add to Chrome
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="relative pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-accent-500/5"></div>
+    <div class="absolute top-20 right-0 w-96 h-96 bg-primary-200/30 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-0 left-0 w-72 h-72 bg-accent-500/10 rounded-full blur-3xl"></div>
+
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid lg:grid-cols-2 gap-12 items-center">
+        <div class="animate-fade-in-up">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-100 text-primary-700 text-xs font-semibold mb-6">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse"></span>
+            Now available on Chrome Web Store
+          </div>
+          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-tight mb-6">
+            Capture any website as <span class="gradient-text">PDF</span> or <span class="gradient-text">Markdown</span>
+          </h1>
+          <p class="text-lg text-slate-600 mb-8 leading-relaxed max-w-lg">
+            Auto-scan multi-page documentation and convert it into structured PDFs, clean Markdown, or plain text. Built for developers, researchers, and AI agents.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-4 mb-8">
+            <a href="https://chrome.google.com/webstore" target="_blank" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl gradient-bg text-white font-semibold hover:shadow-xl hover:shadow-primary-500/30 transition transform hover:-translate-y-0.5">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+              Install Free Extension
+            </a>
+            <button onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white border-2 border-slate-200 text-slate-700 font-semibold hover:border-primary-300 hover:text-primary-700 transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              See How It Works
+            </button>
+          </div>
+          <div class="flex items-center gap-4 text-sm text-slate-500">
+            <div class="flex -space-x-2">
+              <div class="w-8 h-8 rounded-full bg-primary-200 border-2 border-white flex items-center justify-center text-xs font-bold text-primary-700">JD</div>
+              <div class="w-8 h-8 rounded-full bg-accent-200 border-2 border-white flex items-center justify-center text-xs font-bold text-accent-700">SK</div>
+              <div class="w-8 h-8 rounded-full bg-purple-200 border-2 border-white flex items-center justify-center text-xs font-bold text-purple-700">AL</div>
+            </div>
+            <p>Trusted by <span class="font-semibold text-slate-700">500+ developers</span></p>
+          </div>
+        </div>
+
+        <div class="relative animate-fade-in-up delay-200">
+          <div class="relative rounded-2xl shadow-2xl shadow-primary-500/20 border border-slate-200/60 bg-white overflow-hidden">
+            <div class="bg-slate-100 px-4 py-2 flex items-center gap-2 border-b border-slate-200">
+              <div class="w-3 h-3 rounded-full bg-red-400"></div>
+              <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+              <div class="w-3 h-3 rounded-full bg-green-400"></div>
+              <div class="ml-4 px-3 py-0.5 bg-white rounded-md text-xs text-slate-500 flex-1 text-center font-mono">docs.example.com/getting-started</div>
+            </div>
+            <div class="p-6 space-y-4">
+              <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-lg gradient-bg flex items-center justify-center text-white text-lg">📸</div>
+                <div>
+                  <div class="font-semibold text-slate-900">Web Capture Pro</div>
+                  <div class="text-xs text-slate-500">Capturing page 3 of 10...</div>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div class="flex justify-between text-xs text-slate-500"><span>Progress</span><span>30%</span></div>
+                <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full gradient-bg rounded-full" style="width:30%"></div></div>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="bg-slate-50 rounded-lg p-2 border border-slate-100">
+                  <div class="text-slate-400 mb-1">Mode</div>
+                  <div class="font-semibold text-slate-700">📝 Text Extract</div>
+                </div>
+                <div class="bg-slate-50 rounded-lg p-2 border border-slate-100">
+                  <div class="text-slate-400 mb-1">Export</div>
+                  <div class="font-semibold text-slate-700">Markdown + PDF</div>
+                </div>
+              </div>
+              <div class="bg-primary-50 border border-primary-100 rounded-lg p-3">
+                <div class="text-xs text-primary-700 font-medium">✓ Page captured: Introduction</div>
+                <div class="text-xs text-primary-700 font-medium">✓ Page captured: Installation</div>
+                <div class="text-xs text-primary-600">⟳ Capturing: Configuration...</div>
+              </div>
+            </div>
+          </div>
+          <div class="absolute -bottom-6 -right-6 w-24 h-24 bg-primary-400/20 rounded-full blur-2xl"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust -->
+  <section class="py-12 border-y border-slate-100 bg-slate-50/50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <p class="text-sm font-medium text-slate-400 uppercase tracking-wider mb-6">Works with any website</p>
+      <div class="flex flex-wrap justify-center items-center gap-8 opacity-60 grayscale">
+        <span class="text-xl font-bold text-slate-700">GitHub</span>
+        <span class="text-xl font-bold text-slate-700">MDN</span>
+        <span class="text-xl font-bold text-slate-700">Notion</span>
+        <span class="text-xl font-bold text-slate-700">ReadMe</span>
+        <span class="text-xl font-bold text-slate-700">GitBook</span>
+        <span class="text-xl font-bold text-slate-700">Docusaurus</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem -->
+  <section class="py-20 lg:py-28">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16 animate-fade-in-up">
+        <h2 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Copy-pasting docs is broken</h2>
+        <p class="text-lg text-slate-600">You've been there. 47 browser tabs open, trying to piece together documentation that keeps changing.</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm hover:shadow-md transition">
+          <div class="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center text-2xl mb-4">😤</div>
+          <h3 class="font-bold text-slate-900 mb-2">Screenshots are scattered</h3>
+          <p class="text-slate-600 text-sm leading-relaxed">Dozens of PNGs on your desktop with names like `Screenshot_2026-04-17_03.png`. Unsearchable. Unorganized.</p>
+        </div>
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm hover:shadow-md transition">
+          <div class="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center text-2xl mb-4">⏱️</div>
+          <h3 class="font-bold text-slate-900 mb-2">Manual PDFs take hours</h3>
+          <p class="text-slate-600 text-sm leading-relaxed">Print to PDF, page by page, then merge with some sketchy online tool. There has to be a better way.</p>
+        </div>
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm hover:shadow-md transition">
+          <div class="w-12 h-12 rounded-xl bg-yellow-100 text-yellow-600 flex items-center justify-center text-2xl mb-4">🤖</div>
+          <h3 class="font-bold text-slate-900 mb-2">AI needs clean context</h3>
+          <p class="text-slate-600 text-sm leading-relaxed">Feeding messy HTML into your LLM pipeline? You need structured Markdown, not raw DOM soup.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="py-20 lg:py-28 bg-slate-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">One extension, three powerful modes</h2>
+        <p class="text-lg text-slate-600">Whether you need visuals, text, or a batch job — Web Capture Pro handles it automatically.</p>
+      </div>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
+          <div class="w-12 h-12 rounded-xl gradient-bg text-white flex items-center justify-center text-xl mb-4">📷</div>
+          <h3 class="font-bold text-slate-900 mb-2">Screenshot Mode</h3>
+          <p class="text-slate-600 text-sm leading-relaxed mb-3">Capture high-resolution screenshots of every page. Full-page scroll-and-stitch or viewport-only.</p>
+          <span class="text-xs font-semibold text-primary-600 bg-primary-50 px-2 py-1 rounded">Exports: HTML, PDF</span>
+        </div>
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
+          <div class="w-12 h-12 rounded-xl gradient-bg text-white flex items-center justify-center text-xl mb-4">📝</div>
+          <h3 class="font-bold text-slate-900 mb-2">Text Extraction</h3>
+          <p class="text-slate-600 text-sm leading-relaxed mb-3">Clean Markdown export with preserved headings, lists, code blocks, and tables. No DOM soup.</p>
+          <span class="text-xs font-semibold text-primary-600 bg-primary-50 px-2 py-1 rounded">Exports: Markdown, TXT</span>
+        </div>
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
+          <div class="w-12 h-12 rounded-xl gradient-bg text-white flex items-center justify-center text-xl mb-4">📋</div>
+          <h3 class="font-bold text-slate-900 mb-2">Batch URL Mode</h3>
+          <p class="text-slate-600 text-sm leading-relaxed mb-3">Drop a list of URLs and capture them all in sequence. Perfect for API docs or course materials.</p>
+          <span class="text-xs font-semibold text-primary-600 bg-primary-50 px-2 py-1 rounded">Up to 100 URLs</span>
+        </div>
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
+          <div class="w-12 h-12 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center text-xl mb-4">🧠</div>
+          <h3 class="font-bold text-slate-900 mb-2">Smart Navigation</h3>
+          <p class="text-slate-600 text-sm leading-relaxed">Auto-detects "Next" links, pagination, and sidebar TOC. Falls back to your custom CSS selector.</p>
+        </div>
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
+          <div class="w-12 h-12 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center text-xl mb-4">⚡</div>
+          <h3 class="font-bold text-slate-900 mb-2">One-Click Export</h3>
+          <p class="text-slate-600 text-sm leading-relaxed">PDF, HTML, Markdown, or Plain Text — all generated locally in your browser. No cloud upload.</p>
+        </div>
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
+          <div class="w-12 h-12 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center text-xl mb-4">🔒</div>
+          <h3 class="font-bold text-slate-900 mb-2">Private & Local</h3>
+          <p class="text-slate-600 text-sm leading-relaxed">All processing happens in your browser. No data is sent to external servers, cloud APIs, or our infrastructure.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section id="demo" class="py-20 lg:py-28">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">How it works</h2>
+        <p class="text-lg text-slate-600">From URL to export in under a minute. No configuration required.</p>
+      </div>
+      <div class="grid md:grid-cols-4 gap-8">
+        <div class="text-center">
+          <div class="w-16 h-16 rounded-2xl gradient-bg text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4">1</div>
+          <h3 class="font-bold text-slate-900 mb-2">Paste a URL</h3>
+          <p class="text-slate-600 text-sm">Enter the starting page of any documentation site or article.</p>
+        </div>
+        <div class="text-center">
+          <div class="w-16 h-16 rounded-2xl gradient-bg text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4">2</div>
+          <h3 class="font-bold text-slate-900 mb-2">Auto-Navigate</h3>
+          <p class="text-slate-600 text-sm">The extension finds "Next" links and follows them automatically.</p>
+        </div>
+        <div class="text-center">
+          <div class="w-16 h-16 rounded-2xl gradient-bg text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4">3</div>
+          <h3 class="font-bold text-slate-900 mb-2">Capture</h3>
+          <p class="text-slate-600 text-sm">Screenshots or text are captured page-by-page with a smart delay.</p>
+        </div>
+        <div class="text-center">
+          <div class="w-16 h-16 rounded-2xl gradient-bg text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4">4</div>
+          <h3 class="font-bold text-slate-900 mb-2">Export</h3>
+          <p class="text-slate-600 text-sm">Download as PDF, HTML, Markdown, or Plain Text instantly.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Use Cases -->
+  <section id="use-cases" class="py-20 lg:py-28 bg-slate-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Built for modern workflows</h2>
+        <p class="text-lg text-slate-600">From AI research to offline archives — here's how people use Web Capture Pro.</p>
+      </div>
+      <div class="grid md:grid-cols-2 gap-8">
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm flex gap-4">
+          <div class="text-3xl">🤖</div>
+          <div>
+            <h3 class="font-bold text-slate-900 mb-1">AI & LLM Context Gathering</h3>
+            <p class="text-slate-600 text-sm">Scrape documentation sites into clean Markdown for RAG pipelines, fine-tuning datasets, or LLM prompt context.</p>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm flex gap-4">
+          <div class="text-3xl">📚</div>
+          <div>
+            <h3 class="font-bold text-slate-900 mb-1">Offline Documentation Archives</h3>
+            <p class="text-slate-600 text-sm">Save entire API docs, tutorials, or wikis as searchable PDFs before they get restructured or taken down.</p>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm flex gap-4">
+          <div class="text-3xl">🔬</div>
+          <div>
+            <h3 class="font-bold text-slate-900 mb-1">Research & Academic Work</h3>
+            <p class="text-slate-600 text-sm">Collect papers, articles, and references into a single structured document for citation and review.</p>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm flex gap-4">
+          <div class="text-3xl">🎓</div>
+          <div>
+            <h3 class="font-bold text-slate-900 mb-1">Course & Tutorial Backup</h3>
+            <p class="text-slate-600 text-sm">Capture multi-chapter tutorials, coding courses, or walkthroughs for offline study.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="pricing" class="py-20 lg:py-28">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Simple pricing</h2>
+        <p class="text-lg text-slate-600">Start free. Upgrade when you need more power.</p>
+      </div>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <!-- Free -->
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
+          <div class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Free</div>
+          <div class="text-4xl font-extrabold text-slate-900 mb-1">$0</div>
+          <div class="text-slate-500 text-sm mb-6">Forever free</div>
+          <ul class="space-y-3 mb-8">
+            <li class="flex items-center gap-3 text-sm text-slate-700"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Unlimited viewport screenshots</li>
+            <li class="flex items-center gap-3 text-sm text-slate-700"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Unlimited text extraction</li>
+            <li class="flex items-center gap-3 text-sm text-slate-700"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>HTML & Markdown export</li>
+            <li class="flex items-center gap-3 text-sm text-slate-700"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Auto-navigation</li>
+            <li class="flex items-center gap-3 text-sm text-slate-400"><svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>Max 10 pages per capture</li>
+            <li class="flex items-center gap-3 text-sm text-slate-400"><svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>Full-page mode</li>
+          </ul>
+          <a href="https://chrome.google.com/webstore" target="_blank" class="block w-full text-center px-4 py-3 rounded-xl border-2 border-slate-200 text-slate-700 font-semibold hover:border-primary-300 hover:text-primary-700 transition">Install Free</a>
+        </div>
+
+        <!-- Pro -->
+        <div class="bg-white rounded-2xl p-8 border-2 border-primary-500 shadow-lg shadow-primary-500/10 relative">
+          <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full gradient-bg text-white text-xs font-bold">Most Popular</div>
+          <div class="text-sm font-semibold text-primary-600 uppercase tracking-wider mb-2">Pro</div>
+          <div class="text-4xl font-extrabold text-slate-900 mb-1">$8</div>
+          <div class="text-slate-500 text-sm mb-6">per month</div>
+          <ul class="space-y-3 mb-8">
+            <li class="flex items-center gap-3 text-sm text-slate-700"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Everything in Free</li>
+            <li class="flex items-center gap-3 text-sm text-slate-700"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Unlimited pages per capture</li>
+            <li class="flex items-center gap-3 text-sm text-slate-700"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Full-page screenshots</li>
+            <li class="flex items-center gap-3 text-sm text-slate-700"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Batch URL mode (100 URLs)</li>
+            <li class="flex items-center gap-3 text-sm text-slate-700"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>True PDF generation</li>
+            <li class="flex items-center gap-3 text-sm text-slate-700"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Custom CSS selectors</li>
+          </ul>
+          <button class="block w-full text-center px-4 py-3 rounded-xl gradient-bg text-white font-semibold hover:shadow-lg hover:shadow-primary-500/30 transition">Start Pro Trial</button>
+        </div>
+
+        <!-- Team -->
+        <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm">
+          <div class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Team</div>
+          <div class="text-4xl font-extrabold text-slate-900 mb-1">Custom</div>
+          <div class="text-slate-500 text-sm mb-6">For organizations</div>
+          <ul class="space-y-3 mb-8">
+            <li class="flex items-center gap-3 text-sm text-slate-700"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Everything in Pro</li>
+            <li class="flex items-center gap-3 text-sm text-slate-700"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>SSO / SAML</li>
+            <li class="flex items-center gap-3 text-sm text-slate-700"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Shared team captures</li>
+            <li class="flex items-center gap-3 text-sm text-slate-700"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>API access</li>
+            <li class="flex items-center gap-3 text-sm text-slate-700"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Dedicated support</li>
+          </ul>
+          <button onclick="document.getElementById('contact-modal').classList.remove('hidden')" class="block w-full text-center px-4 py-3 rounded-xl border-2 border-slate-200 text-slate-700 font-semibold hover:border-primary-300 hover:text-primary-700 transition">Contact Sales</button>
+        </div>
+      </div>
+      <p class="text-center text-sm text-slate-500 mt-8">7-day Pro trial included. No credit card required.</p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="py-20 lg:py-28 bg-slate-50">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Frequently asked questions</h2>
+      </div>
+      <div class="space-y-4" id="faq-container">
+        <details class="group bg-white rounded-xl border border-slate-200 shadow-sm">
+          <summary class="flex justify-between items-center cursor-pointer p-6 font-semibold text-slate-900 list-none">
+            Is Web Capture Pro really free?
+            <span class="text-primary-500 group-open:rotate-180 transition transform">▼</span>
+          </summary>
+          <div class="px-6 pb-6 text-slate-600 text-sm leading-relaxed">
+            Yes! The core features — viewport screenshots, text extraction, auto-navigation, and HTML/Markdown export — are completely free and unlimited. Pro unlocks full-page mode, batch URLs, true PDF generation, and custom selectors.
+          </div>
+        </details>
+        <details class="group bg-white rounded-xl border border-slate-200 shadow-sm">
+          <summary class="flex justify-between items-center cursor-pointer p-6 font-semibold text-slate-900 list-none">
+            Does it work on single-page apps (SPAs)?
+            <span class="text-primary-500 group-open:rotate-180 transition transform">▼</span>
+          </summary>
+          <div class="px-6 pb-6 text-slate-600 text-sm leading-relaxed">
+            Partially. Auto-navigation works best on traditional multi-page documentation sites. For SPAs like React or Vue docs, we recommend using <strong>Batch URL mode</strong> where you paste the exact URLs you want to capture.
+          </div>
+        </details>
+        <details class="group bg-white rounded-xl border border-slate-200 shadow-sm">
+          <summary class="flex justify-between items-center cursor-pointer p-6 font-semibold text-slate-900 list-none">
+            Is my data private?
+            <span class="text-primary-500 group-open:rotate-180 transition transform">▼</span>
+          </summary>
+          <div class="px-6 pb-6 text-slate-600 text-sm leading-relaxed">
+            Completely. All capture and processing happens inside your browser. No data is sent to external servers, cloud APIs, or our infrastructure. Your screenshots and extracted text never leave your machine.
+          </div>
+        </details>
+        <details class="group bg-white rounded-xl border border-slate-200 shadow-sm">
+          <summary class="flex justify-between items-center cursor-pointer p-6 font-semibold text-slate-900 list-none">
+            What browsers are supported?
+            <span class="text-primary-500 group-open:rotate-180 transition transform">▼</span>
+          </summary>
+          <div class="px-6 pb-6 text-slate-600 text-sm leading-relaxed">
+            Chrome 109+ and Chromium-based browsers (Edge, Brave, Opera). True PDF generation requires Chrome 109+ for offscreen document support. Firefox support is on the roadmap.
+          </div>
+        </details>
+        <details class="group bg-white rounded-xl border border-slate-200 shadow-sm">
+          <summary class="flex justify-between items-center cursor-pointer p-6 font-semibold text-slate-900 list-none">
+            Can I get a refund?
+            <span class="text-primary-500 group-open:rotate-180 transition transform">▼</span>
+          </summary>
+          <div class="px-6 pb-6 text-slate-600 text-sm leading-relaxed">
+            Yes. We offer a 14-day money-back guarantee on all Pro subscriptions. If Web Capture Pro doesn't meet your needs, contact us for a full refund — no questions asked.
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-20 lg:py-28">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div class="rounded-3xl gradient-bg p-12 lg:p-16 text-white relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+        <div class="relative">
+          <h2 class="text-3xl sm:text-4xl font-bold mb-4">Ready to capture the web?</h2>
+          <p class="text-primary-100 text-lg mb-8 max-w-xl mx-auto">Join 500+ developers who use Web Capture Pro to archive documentation, build AI context, and save research.</p>
+          <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="https://chrome.google.com/webstore" target="_blank" class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-white text-primary-700 font-bold hover:shadow-xl transition transform hover:-translate-y-0.5">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+              Add to Chrome — It's Free
+            </a>
+          </div>
+          <p class="text-primary-200 text-sm mt-4">No signup required. 7-day Pro trial included.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-12 border-t border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg gradient-bg flex items-center justify-center text-white font-bold text-sm">WC</div>
+          <span class="font-bold text-lg text-slate-900">Web Capture Pro</span>
+        </div>
+        <div class="flex gap-6 text-sm text-slate-500">
+          <a href="#" class="hover:text-slate-900 transition">Privacy</a>
+          <a href="#" class="hover:text-slate-900 transition">Terms</a>
+          <a href="https://github.com/jarmen423/web-capture-extension" target="_blank" class="hover:text-slate-900 transition">GitHub</a>
+          <a href="mailto:hello@agentmemorylabs.com" class="hover:text-slate-900 transition">Contact</a>
+        </div>
+        <div class="text-sm text-slate-400">
+          © 2026 Agent Memory Labs
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Contact Modal -->
+  <div id="contact-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl">
+      <h3 class="text-xl font-bold text-slate-900 mb-2">Contact Sales</h3>
+      <p class="text-slate-600 text-sm mb-4">Tell us about your team and we'll get back to you within 24 hours.</p>
+      <form onsubmit="event.preventDefault(); this.innerHTML='<div class=\'text-center py-8\'><div class=\'text-4xl mb-2\'>✅</div><div class=\'font-bold text-slate-900\'>Message sent!</div><div class=\'text-sm text-slate-500 mt-1\'>We\'ll be in touch soon.</div></div>';">
+        <input type="email" placeholder="Work email" required class="w-full px-4 py-3 rounded-xl border border-slate-200 mb-3 text-sm focus:outline-none focus:border-primary-500">
+        <textarea placeholder="How can we help?" rows="3" class="w-full px-4 py-3 rounded-xl border border-slate-200 mb-4 text-sm focus:outline-none focus:border-primary-500"></textarea>
+        <div class="flex gap-3">
+          <button type="button" onclick="document.getElementById('contact-modal').classList.add('hidden')" class="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50">Cancel</button>
+          <button type="submit" class="flex-1 px-4 py-3 rounded-xl gradient-bg text-white font-semibold text-sm hover:shadow-lg">Send Message</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    console.log('Agent Memory Labs — Web Capture Pro landing page loaded');
+  </script>
+</body>
+</html>
