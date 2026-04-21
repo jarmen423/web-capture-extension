@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "web-capture-pro-landing",
   "routes": [
     { "src": "/(.*)", "dest": "/index.html" }
   ]
